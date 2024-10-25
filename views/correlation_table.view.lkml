@@ -5,8 +5,7 @@ view: correlation_table_pdt {
               SalesOrders.RequestedDeliveryDate_VDATU AS date,
               SalesOrders.CumulativeOrderQuantity_KWMENG AS SalesOrderQuantity,
               Customers.City_ORT01 AS Location,
-              Customers.PostalCode_PSTLZ AS PostalCode,
-              FIRST_VALUE(SalesOrders.RequestedDeliveryDate_VDATU) OVER (ORDER BY SalesOrders.RequestedDeliveryDate_VDATU DESC) AS MaxDate
+              Customers.PostalCode_PSTLZ AS PostalCode
             FROM
               `@{GCP_PROJECT}.@{REPORTING_DATASET}.SalesOrders` AS SalesOrders
             LEFT JOIN
@@ -16,6 +15,13 @@ view: correlation_table_pdt {
                 AND SalesOrders.ShipToPartyItem_KUNNR = Customers.CustomerNumber_KUNNR
             WHERE
               SalesOrders.Client_MANDT = "@{CLIENT}"
+              AND EXTRACT(YEAR
+              FROM
+                SalesOrders.RequestedDeliveryDate_VDATU) >= (
+              SELECT
+                EXTRACT(YEAR
+                FROM
+                  CURRENT_DATE()) - 3)
           )
 
         SELECT DISTINCT Sales.Product,
@@ -28,10 +34,7 @@ view: correlation_table_pdt {
         `@{GCP_PROJECT}.@{K9_REPORTING_DATASET}.Weather` AS Weather
         ON
         Sales.PostalCode = Weather.PostCode
-        AND Sales.date = Weather.WeekStartDate
-        WHERE
-        EXTRACT(YEAR FROM
-        Sales.date) >= (SELECT DISTINCT EXTRACT(YEAR FROM MaxDate) - 3 FROM Sales))
+        AND Sales.date = Weather.WeekStartDate)
         ;;
       interval_trigger: "730 hour"
     }
